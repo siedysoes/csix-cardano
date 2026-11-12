@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest and links
+        run: python3 scripts/validate.py
+
+      - name: Check Markdown hygiene
+        run: |
+          set -euo pipefail
+          # every article starts with an H1 and has no front matter
+          bad=0
+          for f in $(find en id -name '*.md'); do
+            first=$(head -n1 "$f")
+            case "$first" in
+              "# "*) ;;
+              *) echo "::error file=$f::first line must be '# Title'"; bad=1 ;;
+            esac
+            if [ "$(sed -n '1p' "$f")" = "---" ]; then
+              echo "::error file=$f::front matter is not allowed"; bad=1
+            fi
+          done
+          exit $bad
